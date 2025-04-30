@@ -1,39 +1,63 @@
+# Dengue Fever Prediction
 
-
-A comprehensive data science project template with a well-organized structure for machine learning and data analysis projects.
+This project aims to predict dengue fever cases using machine learning techniques.
 
 ## Project Structure
 
 ```
-data-science-essentials/
-├── data/               # Datasets
-│   ├── raw/           # Raw data
-│   ├── processed/     # Processed data
-│   └── models/        # Saved models
-├── docs/              # Documentation
-├── src/               # Source code
-│   ├── data/         # Data processing
-│   ├── features/     # Feature engineering
-│   ├── models/       # Model development
-│   └── visualization/# Visualization
-├── tests/             # Tests
-├── notebooks/         # Jupyter Notebooks
-├── requirements.txt   # Python dependencies
-├── README.md         # Project description
-└── CHANGELOG.md      # Version history
+.
+├── data/
+│   ├── raw/           # Original data files
+│   └── processed/     # Processed and cleaned data
+├── src/
+│   ├── investigate_data.py    # Data exploration and analysis
+│   ├── train_xgboost.py       # XGBoost model training and prediction
+│   └── utils.py               # Utility functions
+├── notebooks/         # Jupyter notebooks for analysis
+├── environment.yml    # Conda environment specification
+└── README.md         # Project documentation
 ```
 
-## Getting Started
+## Setup
 
-1. Clone this repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Create a virtual environment (recommended)
-4. Start working on your data science project!
+1. Create and activate the conda environment:
+```bash
+conda env create -f environment.yml
+conda activate mini-competition
+```
 
-## Contributing
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-Please read CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests.
+## Usage
 
-## License
+1. Run data investigation:
+```bash
+python src/investigate_data.py
+```
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+2. Train and predict with XGBoost:
+```bash
+python src/train_xgboost.py
+```
+
+## Data Processing
+
+The data processing pipeline includes:
+- Loading and merging training and test data
+- Handling missing values
+- Feature engineering
+- Temporal and weather feature analysis
+- Correlation analysis
+- Time series visualization
+
+## Model Training
+
+The XGBoost model is trained with the following features:
+- Temporal features (year, week of year)
+- Weather features (temperature, precipitation, etc.)
+- City-specific features
+
+The model uses time series cross-validation for evaluation and includes feature importance analysis.
