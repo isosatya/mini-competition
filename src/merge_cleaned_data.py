@@ -9,7 +9,7 @@ sys.path.append(str(project_root))
 
 def merge_cleaned_data():
     """
-    Merge the cleaned training features, training labels, and test features into one dataset.
+    Merge the cleaned training features and training labels into one dataset.
     """
     # Define paths
     processed_dir = Path("data/processed")
@@ -17,17 +17,9 @@ def merge_cleaned_data():
     # Load cleaned datasets
     train_features = pd.read_csv(processed_dir / "cleaned_train_features.csv")
     train_labels = pd.read_csv(processed_dir / "cleaned_train_labels.csv")
-    test_features = pd.read_csv(processed_dir / "cleaned_test_features.csv")
-    
-    # Add is_test column to distinguish between train and test data
-    train_features['is_test'] = False
-    test_features['is_test'] = True
     
     # Merge training features and labels
-    train_data = pd.merge(train_features, train_labels, on=['city', 'year', 'weekofyear'])
-    
-    # Combine train and test data
-    merged_data = pd.concat([train_data, test_features], ignore_index=True)
+    merged_data = pd.merge(train_features, train_labels, on=['city', 'year', 'weekofyear'])
     
     # Save merged dataset
     merged_data.to_csv(processed_dir / "cleaned_data_merged.csv", index=False)

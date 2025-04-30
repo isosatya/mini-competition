@@ -33,7 +33,9 @@ def prepare_features(df, is_test=False):
     y = df['total_cases'] if ('total_cases' in df.columns and not is_test) else None
     
     # Drop non-feature columns
-    features_to_drop = ['city', 'year', 'weekofyear', 'week_start_date', 'is_test', 'total_cases']
+    #features_to_drop = ['city', 'year', 'weekofyear', 'week_start_date', 'is_test', 'total_cases']
+    features_to_drop = ['city', 'year', 'week_start_date', 'is_test', 'total_cases']
+
     X = df.drop(columns=[col for col in features_to_drop if col in df.columns])
     
     # Handle missing values in features
