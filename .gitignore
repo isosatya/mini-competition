@@ -35,19 +35,8 @@ venv.bak/
 *.ipynb_metadata
 jupyter_notebook_config.py
 
-# Data files
-*.csv
-*.dat
-*.db
-*.sqlite
-*.sqlite3
-*.h5
-*.hdf5
-*.pkl
-*.pickle
-*.json
-# Uncomment if you want to ignore all data files
-# data/
+# Data files - Track all data files
+# No data files are ignored
 
 # Large media files
 *.mp4
