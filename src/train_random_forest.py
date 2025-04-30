@@ -55,21 +55,34 @@ def create_seasonal_features(df):
     df['season'] = df['month'] % 12 // 3 + 1  # 1: Winter, 2: Spring, 3: Summer, 4: Fall
     return df
 
-def prepare_features(df, is_test=False):
+def prepare_features(df, is_test=False, train_data=None):
     """Prepare features for training or testing."""
     # Get target variable first (before dropping columns)
     y = df['total_cases'] if ('total_cases' in df.columns and not is_test) else None
     
     # Create engineered features
-    if not is_test:
+    if is_test:
+        if train_data is None:
+            raise ValueError("train_data must be provided when preparing test features")
+        
+        # Create lag features using only training data
+        train_data = create_lag_features(train_data, 'total_cases')
+        last_values = train_data.groupby('city')['total_cases'].last()
+        
+        # Create lag features for test data using last known values from training
+        df = df.copy()
+        for lag in [1, 2, 3, 4]:
+            col = f'total_cases_lag_{lag}'
+            df[col] = df['city'].map(last_values)
+    else:
         df = create_lag_features(df, 'total_cases')
+    
+    # Create rolling features using only the current data (no leakage)
     df = create_rolling_features(df)
     df = create_seasonal_features(df)
     
     # Drop non-feature columns
-    #features_to_drop = ['city', 'year', 'weekofyear', 'week_start_date', 'is_test', 'total_cases']
     features_to_drop = ['city', 'year', 'week_start_date', 'is_test', 'total_cases']
-
     X = df.drop(columns=[col for col in features_to_drop if col in df.columns])
     
     # Handle missing values in features
@@ -157,6 +170,7 @@ def main():
     cities = train_data['city'].unique()
     models = {}
     metrics = {}
+    prepared_test_data = {}  # Store prepared test data for each city
     
     for city in cities:
         # Filter data for current city
@@ -166,7 +180,23 @@ def main():
         # Prepare features
         print(f"\nPreparing features for {city}...")
         X_train, y_train = prepare_features(city_train_data, is_test=False)
-        X_test, _ = prepare_features(city_test_data, is_test=True)
+        X_test, _ = prepare_features(city_test_data, is_test=True, train_data=city_train_data)
+        
+        # Verify feature consistency
+        train_features = set(X_train.columns)
+        test_features = set(X_test.columns)
+        
+        if train_features != test_features:
+            missing_in_test = train_features - test_features
+            missing_in_train = test_features - train_features
+            print(f"\nWarning: Feature mismatch for {city}:")
+            if missing_in_test:
+                print(f"Features missing in test data: {missing_in_test}")
+            if missing_in_train:
+                print(f"Features missing in training data: {missing_in_train}")
+            raise ValueError("Feature mismatch between training and test data")
+        
+        prepared_test_data[city] = X_test  # Store prepared test data
         
         # Train and evaluate model
         model, city_metrics = train_and_evaluate(X_train, y_train, city)
@@ -183,11 +213,11 @@ def main():
         print(f"\nPlotting feature importance for {city}...")
         plot_feature_importance(model, X_train.columns.values, city)
     
-    # Make predictions for each city
+    # Make predictions for each city using stored prepared test data
     all_predictions = []
     for city in cities:
         city_test_data = test_data[test_data['city'] == city]
-        X_test, _ = prepare_features(city_test_data, is_test=True)
+        X_test = prepared_test_data[city]  # Use stored prepared test data
         predictions = models[city].predict(X_test)
         
         # Create submission DataFrame for this city
