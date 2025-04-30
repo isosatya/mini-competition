@@ -125,3 +125,14 @@ wheels/
 runs/
 
 minicomp/
+
+# Data and output files
+*.png
+*.csv
+data/processed/*
+!data/processed/.gitkeep
+
+# Temp files
+.DS_Store
+.idea/
+temp_backup/
