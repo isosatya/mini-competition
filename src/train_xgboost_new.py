@@ -243,13 +243,18 @@ def make_predictions(model, test_features):
     # Make predictions
     predictions = model.predict(X_test)
     
-    # Create submission DataFrame with correct column order
+    # Create submission DataFrame with correct column order and row order
     submission = pd.DataFrame({
         'city': test_features['city'],
         'year': test_features['year'],
         'weekofyear': test_features['weekofyear'],
         'total_cases': predictions.round().astype(int)
     })
+    
+    # Ensure the order matches the original test data
+    submission = submission.set_index(['city', 'year', 'weekofyear'])
+    submission = submission.reindex(test_features.set_index(['city', 'year', 'weekofyear']).index)
+    submission = submission.reset_index()
     
     # Save submission
     submission_path = Path("data/processed/submission_xgboost.csv")
