@@ -255,15 +255,16 @@ def make_predictions(model, test_features):
     # Make predictions
     predictions = model.predict(X_test)
     
-    # Create submission DataFrame
+    # Create submission DataFrame with correct column order
     submission = pd.DataFrame({
         'city': test_features['city'],
-        'week_start_date': test_features['week_start_date'],
+        'year': test_features['year'],
+        'weekofyear': test_features['weekofyear'],
         'total_cases': predictions.round().astype(int)
     })
     
     # Save submission
-    submission_path = Path("data/processed/submission.csv")
+    submission_path = Path("data/processed/submission_lightgbm.csv")
     submission.to_csv(submission_path, index=False)
     print(f"Submission saved to {submission_path}")
 

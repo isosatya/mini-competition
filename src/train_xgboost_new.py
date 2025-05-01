@@ -243,7 +243,7 @@ def make_predictions(model, test_features):
     # Make predictions
     predictions = model.predict(X_test)
     
-    # Create submission DataFrame
+    # Create submission DataFrame with correct column order
     submission = pd.DataFrame({
         'city': test_features['city'],
         'year': test_features['year'],
