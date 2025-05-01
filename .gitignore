@@ -132,6 +132,9 @@ minicomp/
 data/processed/*
 !data/processed/.gitkeep
 
+# models
+models/
+
 # Temp files
 .DS_Store
 .idea/
