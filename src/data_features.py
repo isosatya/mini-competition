@@ -71,84 +71,97 @@ def load_cleaned_data():
 
 def add_temporal_features(df):
     """
-    Add temporal features to the dataset.
+    Add temporal features to the DataFrame.
     
     Args:
-        df (pd.DataFrame): DataFrame to add features to
+        df (pd.DataFrame): DataFrame with date column
     
     Returns:
         pd.DataFrame: DataFrame with added temporal features
     """
     print_section("Adding Temporal Features")
     
-    # Convert week_start_date to datetime if it's not already
-    if 'week_start_date' in df.columns and not pd.api.types.is_datetime64_any_dtype(df['week_start_date']):
-        df['week_start_date'] = pd.to_datetime(df['week_start_date'])
+    # Create a copy to avoid modifying the original
+    df_temp = df.copy()
+    
+    # Convert date to datetime
+    df_temp['week_start_date'] = pd.to_datetime(df_temp['week_start_date'])
     
     # Add temporal features
-    df['dayofyear'] = df['week_start_date'].dt.dayofyear
-    df['quarter'] = df['week_start_date'].dt.quarter
-    df['is_month_start'] = df['week_start_date'].dt.is_month_start.astype(int)
-    df['is_month_end'] = df['week_start_date'].dt.is_month_end.astype(int)
+    df_temp['year'] = df_temp['week_start_date'].dt.year
+    df_temp['month'] = df_temp['week_start_date'].dt.month
+    df_temp['weekofyear'] = df_temp['week_start_date'].dt.isocalendar().week
     
-    # Add cyclic features for weekofyear
-    df['weekofyear_sin'] = np.sin(2 * np.pi * df['weekofyear'] / 52)
-    df['weekofyear_cos'] = np.cos(2 * np.pi * df['weekofyear'] / 52)
+    # Add cyclic features for week of year
+    df_temp['weekofyear_sin'] = np.sin(2 * np.pi * df_temp['weekofyear'] / 52)
+    df_temp['weekofyear_cos'] = np.cos(2 * np.pi * df_temp['weekofyear'] / 52)
     
-    return df
+    return df_temp
 
 def add_weather_features(df):
     """
-    Add weather-related features to the dataset.
+    Add basic weather features to the DataFrame.
     
     Args:
-        df (pd.DataFrame): DataFrame to add features to
+        df (pd.DataFrame): DataFrame with weather columns
     
     Returns:
         pd.DataFrame: DataFrame with added weather features
     """
     print_section("Adding Weather Features")
     
-    # Temperature features
-    temp_cols = [col for col in df.columns if 'temp' in col.lower()]
+    # Create a copy to avoid modifying the original
+    df_weather = df.copy()
+    
+    # Initialize all required weather features with 0
+    required_features = [
+        'temp_avg',
+        'humidity_avg',
+        'precip_total',
+        'precip_days',
+        'pressure_avg'
+    ]
+    
+    for feature in required_features:
+        if feature not in df_weather.columns:
+            df_weather[feature] = 0
+    
+    # Calculate average temperature
+    temp_cols = [col for col in df.columns if 'temp' in col.lower() and 'lag' not in col.lower()]
     if temp_cols:
-        df['temp_avg'] = df[temp_cols].mean(axis=1)
+        df_weather['temp_avg'] = df[temp_cols].mean(axis=1)
     
-    # Humidity features
-    humidity_cols = [col for col in df.columns if 'humidity' in col.lower()]
+    # Calculate average humidity
+    humidity_cols = [col for col in df.columns if 'humidity' in col.lower() and 'lag' not in col.lower()]
     if humidity_cols:
-        df['humidity_avg'] = df[humidity_cols].mean(axis=1)
+        df_weather['humidity_avg'] = df[humidity_cols].mean(axis=1)
     
-    # Precipitation features
-    precip_cols = [col for col in df.columns if 'precip' in col.lower()]
+    # Calculate precipitation features
+    precip_cols = [col for col in df.columns if 'precip' in col.lower() and 'lag' not in col.lower()]
     if precip_cols:
-        df['precip_total'] = df[precip_cols].sum(axis=1)
-        df['precip_days'] = (df[precip_cols] > 0).sum(axis=1)
+        df_weather['precip_total'] = df[precip_cols].sum(axis=1)
+        df_weather['precip_days'] = (df[precip_cols] > 0).sum(axis=1)
     
-    # Air pressure features
-    pressure_cols = [col for col in df.columns if 'pressure' in col.lower()]
+    # Calculate average pressure
+    pressure_cols = [col for col in df.columns if 'pressure' in col.lower() and 'lag' not in col.lower()]
     if pressure_cols:
-        df['pressure_avg'] = df[pressure_cols].mean(axis=1)
+        df_weather['pressure_avg'] = df[pressure_cols].mean(axis=1)
     
-    return df
+    return df_weather
 
-def add_weather_lag_features(df, lags=[1, 2, 3, 4]):
+def add_weather_lag_features(df):
     """
-    Add lagged weather features to the dataset.
+    Add lag features for weather data.
     
     Args:
-        df (pd.DataFrame): DataFrame to add features to
-        lags (list): List of lag periods to create
+        df (pd.DataFrame): DataFrame with weather features
     
     Returns:
         pd.DataFrame: DataFrame with added lag features
     """
     print_section("Adding Weather Lag Features")
     
-    # Sort by city and date to ensure correct lagging
-    df = df.sort_values(['city', 'week_start_date'])
-    
-    # Weather features to create lags for
+    # Define weather features for lagging
     weather_features = [
         'temp_avg',
         'humidity_avg',
@@ -157,48 +170,85 @@ def add_weather_lag_features(df, lags=[1, 2, 3, 4]):
         'pressure_avg'
     ]
     
-    # Create lag features for each city separately
+    # Create a copy to avoid modifying the original
+    df_lagged = df.copy()
+    
+    # Ensure all required features exist
+    for feature in weather_features:
+        if feature not in df_lagged.columns:
+            df_lagged[feature] = 0
+    
+    # Group by city to maintain city order
     for city in df['city'].unique():
         city_mask = df['city'] == city
+        
+        # Create lag features for each weather feature
         for feature in weather_features:
-            if feature in df.columns:
-                for lag in lags:
-                    df.loc[city_mask, f'{feature}_lag_{lag}'] = df.loc[city_mask, feature].shift(lag)
+            for lag in [1, 2, 3, 4]:
+                lag_col = f'{feature}_lag_{lag}'
+                df_lagged.loc[city_mask, lag_col] = df_lagged.loc[city_mask, feature].shift(lag)
     
-    return df
+    # Fill NaN values with 0
+    df_lagged = df_lagged.fillna(0)
+    
+    return df_lagged
 
 def add_ndvi_features(df):
     """
-    Add NDVI-related features to the dataset.
+    Add NDVI-related features to the DataFrame.
     
     Args:
-        df (pd.DataFrame): DataFrame to add features to
+        df (pd.DataFrame): DataFrame with NDVI columns
     
     Returns:
         pd.DataFrame: DataFrame with added NDVI features
     """
     print_section("Adding NDVI Features")
     
-    # Get all NDVI columns
+    # Create a copy to avoid modifying the original
+    df_ndvi = df.copy()
+    
+    # Calculate NDVI statistics
     ndvi_cols = [col for col in df.columns if 'ndvi' in col.lower()]
     
     if ndvi_cols:
-        # Calculate mean NDVI
-        df['ndvi_mean'] = df[ndvi_cols].mean(axis=1)
-        
-        # Calculate NDVI standard deviation
-        df['ndvi_std'] = df[ndvi_cols].std(axis=1)
-        
-        # Calculate NDVI range
-        df['ndvi_range'] = df[ndvi_cols].max(axis=1) - df[ndvi_cols].min(axis=1)
-        
-        # Calculate NDVI trend (slope)
-        df['ndvi_trend'] = df[ndvi_cols].apply(
-            lambda x: np.polyfit(range(len(x)), x, 1)[0] if not x.isna().any() else np.nan,
-            axis=1
-        )
+        # Calculate statistics for each city separately
+        for city in df['city'].unique():
+            city_mask = df['city'] == city
+            for col in ndvi_cols:
+                df_ndvi.loc[city_mask, f'{col}_mean'] = df.loc[city_mask, col].rolling(window=4, min_periods=1).mean()
+                df_ndvi.loc[city_mask, f'{col}_std'] = df.loc[city_mask, col].rolling(window=4, min_periods=1).std()
     
-    return df
+    return df_ndvi
+
+def prepare_features(df):
+    """
+    Prepare all features for the model.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame
+    
+    Returns:
+        pd.DataFrame: DataFrame with all features
+    """
+    print_section("Preparing All Features")
+    
+    # Create a copy to avoid modifying the original
+    df_features = df.copy()
+    
+    # Add temporal features
+    df_features = add_temporal_features(df_features)
+    
+    # Add weather features first
+    df_features = add_weather_features(df_features)
+    
+    # Add weather lag features
+    df_features = add_weather_lag_features(df_features)
+    
+    # Add NDVI features
+    df_features = add_ndvi_features(df_features)
+    
+    return df_features
 
 def save_featured_data(train_data, test_features):
     """
@@ -228,29 +278,24 @@ def main():
     """Main function to run the feature engineering process."""
     print_section("Starting Feature Engineering")
     
-    # Load data
+    # Load cleaned data
     train_data, test_features = load_cleaned_data()
     
-    # Add features
-    train_data = add_temporal_features(train_data)
-    test_features = add_temporal_features(test_features)
+    # Prepare features for training data
+    print("Preparing features for training data...")
+    featured_train_data = prepare_features(train_data)
     
-    train_data = add_weather_features(train_data)
-    test_features = add_weather_features(test_features)
-    
-    train_data = add_weather_lag_features(train_data)
-    test_features = add_weather_lag_features(test_features)
-    
-    train_data = add_ndvi_features(train_data)
-    test_features = add_ndvi_features(test_features)
+    # Prepare features for test data
+    print("Preparing features for test data...")
+    featured_test_features = prepare_features(test_features)
     
     # Save featured data
-    save_featured_data(train_data, test_features)
+    save_featured_data(featured_train_data, featured_test_features)
     
     print_section("Next Steps")
     print("1. Review the featured data")
-    print("2. Use the featured data for model training")
-    print("3. If needed, adjust the feature engineering process")
+    print("2. Proceed with model training")
+    print("3. If needed, adjust feature engineering")
 
 if __name__ == "__main__":
     main() 
