@@ -65,6 +65,7 @@ def add_temporal_features(df):
         df['is_month_end'] = df['week_start_date'].dt.is_month_end.astype(int)
         
         # Add cyclic week features
+        df['weekofyear'] = df['week_start_date'].dt.isocalendar().week
         df['week_sin'] = np.sin(2 * np.pi * df['weekofyear'] / 52)
         df['week_cos'] = np.cos(2 * np.pi * df['weekofyear'] / 52)
         
