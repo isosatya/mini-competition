@@ -1,17 +1,17 @@
 """
-Random Forest Training Module (New)
+Random Forest Model Training Module
 
-This module trains a Random Forest model using the cleaned and featured data.
-It includes hyperparameter tuning, model evaluation, and submission file creation.
+This module trains a Random Forest model on the featured data.
+It includes hyperparameter tuning and model evaluation.
 """
 
 import pandas as pd
 import numpy as np
-from pathlib import Path
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 import joblib
+from pathlib import Path
 import os
 import sys
 
@@ -73,72 +73,42 @@ def load_featured_data():
     
     return train_data, test_features
 
-def prepare_features(df, target_col='total_cases', is_test=False, train_data=None):
+def prepare_features(df, is_training=True):
     """
-    Prepare features for training or prediction.
+    Prepare features for model training or prediction.
     
     Args:
         df (pd.DataFrame): DataFrame with features
-        target_col (str): Name of the target column
-        is_test (bool): Whether the data is for testing
-        train_data (pd.DataFrame): Training data for lag features
+        is_training (bool): Whether preparing for training or prediction
     
     Returns:
-        tuple: (X, y) for training or (X, None) for testing
+        pd.DataFrame: DataFrame with prepared features
     """
+    print_section("Preparing Features")
+    
     # Drop non-feature columns
-    non_feature_cols = ['city', 'week_start_date', 'year', 'month', 'weekofyear']
+    non_feature_cols = ['city', 'week_start_date']
+    if is_training:
+        non_feature_cols.append('total_cases')
     
-    # Only remove target column from training data
-    if not is_test and target_col in df.columns:
-        non_feature_cols.append(target_col)
+    features = df.drop(columns=non_feature_cols)
     
-    # Keep the cyclic transformations of weekofyear
-    if 'weekofyear_sin' in df.columns and 'weekofyear_cos' in df.columns:
-        non_feature_cols.remove('weekofyear')
+    # Ensure all lag features are present
+    weather_features = [
+        'temp_avg',
+        'humidity_avg',
+        'precip_total',
+        'precip_days',
+        'pressure_avg'
+    ]
     
-    # For test data, we need to handle lag features
-    if is_test and train_data is not None:
-        # Get the last known values for each city
-        last_values = {}
-        for city in df['city'].unique():
-            city_data = train_data[train_data['city'] == city].sort_values('week_start_date')
-            if len(city_data) > 0:
-                last_values[city] = city_data[target_col].iloc[-4:].values
-        
-        # Create lag features using the last known values
-        for city in df['city'].unique():
-            city_mask = df['city'] == city
-            if city in last_values and len(last_values[city]) == 4:
-                for lag in range(1, 5):
-                    df.loc[city_mask, f'total_cases_lag_{lag}'] = last_values[city][-lag]
-            else:
-                # If no historical data, use 0
-                for lag in range(1, 5):
-                    df.loc[city_mask, f'total_cases_lag_{lag}'] = 0
+    for feature in weather_features:
+        for lag in [1, 2, 3, 4]:
+            lag_col = f'{feature}_lag_{lag}'
+            if lag_col not in features.columns:
+                features[lag_col] = 0
     
-    # For training data, we need to create lag features without using future values
-    elif not is_test:
-        # Sort data by city and date
-        df = df.sort_values(['city', 'week_start_date'])
-        
-        # Create lag features for each city
-        for city in df['city'].unique():
-            city_mask = df['city'] == city
-            city_data = df[city_mask].copy()
-            
-            # Create lag features
-            for lag in range(1, 5):
-                df.loc[city_mask, f'total_cases_lag_{lag}'] = city_data[target_col].shift(lag)
-        
-        # Fill NaN values with 0
-        for lag in range(1, 5):
-            df[f'total_cases_lag_{lag}'] = df[f'total_cases_lag_{lag}'].fillna(0)
-    
-    X = df.drop(columns=non_feature_cols)
-    y = df[target_col] if not is_test else None
-    
-    return X, y
+    return features
 
 def train_model(X_train, y_train):
     """
@@ -151,7 +121,7 @@ def train_model(X_train, y_train):
     Returns:
         RandomForestRegressor: Trained model
     """
-    print_section("Training Random Forest Model")
+    print_section("Training Model")
     
     # Define parameter grid
     param_grid = {
@@ -161,28 +131,29 @@ def train_model(X_train, y_train):
         'min_samples_leaf': [1, 2, 4]
     }
     
-    # Create base model
+    # Initialize model
     rf = RandomForestRegressor(random_state=42)
     
-    # Grid search
+    # Initialize grid search
     grid_search = GridSearchCV(
         estimator=rf,
         param_grid=param_grid,
         cv=5,
-        n_jobs=-1,
-        verbose=2
+        scoring='neg_mean_squared_error',
+        n_jobs=-1
     )
     
-    # Fit model
-    print("Starting grid search...")
+    # Fit grid search
+    print("Performing grid search...")
     grid_search.fit(X_train, y_train)
     
     # Get best model
     best_model = grid_search.best_estimator_
     
-    print("\nBest parameters:")
+    # Print best parameters
+    print("\nBest Parameters:")
     for param, value in grid_search.best_params_.items():
-        print(f"- {param}: {value}")
+        print(f"{param}: {value}")
     
     return best_model
 
@@ -191,14 +162,14 @@ def evaluate_model(model, X_test, y_test):
     Evaluate the model on test data.
     
     Args:
-        model (RandomForestRegressor): Trained model
+        model: Trained model
         X_test (pd.DataFrame): Test features
         y_test (pd.Series): Test target
     
     Returns:
         dict: Evaluation metrics
     """
-    print_section("Model Evaluation")
+    print_section("Evaluating Model")
     
     # Make predictions
     y_pred = model.predict(X_test)
@@ -208,8 +179,9 @@ def evaluate_model(model, X_test, y_test):
     rmse = np.sqrt(mse)
     r2 = r2_score(y_test, y_pred)
     
+    # Print metrics
     print(f"RMSE: {rmse:.2f}")
-    print(f"R²: {r2:.4f}")
+    print(f"R² Score: {r2:.2f}")
     
     return {
         'rmse': rmse,
@@ -218,77 +190,68 @@ def evaluate_model(model, X_test, y_test):
 
 def save_model(model, metrics):
     """
-    Save the trained model and its metrics.
+    Save the trained model and metrics.
     
     Args:
-        model (RandomForestRegressor): Trained model
+        model: Trained model
         metrics (dict): Model evaluation metrics
     """
     print_section("Saving Model")
     
-    # Create models directory
+    # Create models directory if it doesn't exist
     models_dir = Path("models")
     models_dir.mkdir(exist_ok=True)
     
     # Save model
-    model_path = models_dir / "random_forest_new.joblib"
+    model_path = models_dir / "random_forest_model.joblib"
     joblib.dump(model, model_path)
     print(f"Model saved to {model_path}")
     
     # Save metrics
-    metrics_path = models_dir / "random_forest_new_metrics.txt"
+    metrics_path = models_dir / "random_forest_metrics.txt"
     with open(metrics_path, 'w') as f:
         f.write(f"RMSE: {metrics['rmse']:.2f}\n")
-        f.write(f"R²: {metrics['r2']:.4f}\n")
+        f.write(f"R² Score: {metrics['r2']:.2f}\n")
     print(f"Metrics saved to {metrics_path}")
 
-def make_predictions(model, test_features, train_data):
+def make_predictions(model, test_features):
     """
     Make predictions on test data and create submission file.
     
     Args:
-        model (RandomForestRegressor): Trained model
+        model: Trained model
         test_features (pd.DataFrame): Test features
-        train_data (pd.DataFrame): Training data for lag features
-    
-    Returns:
-        pd.DataFrame: Submission data
     """
     print_section("Making Predictions")
     
     # Prepare test features
-    X_test, _ = prepare_features(test_features, is_test=True, train_data=train_data)
+    X_test = prepare_features(test_features, is_training=False)
     
     # Make predictions
     predictions = model.predict(X_test)
     
-    # Create submission DataFrame with correct column order
+    # Create submission DataFrame
     submission = pd.DataFrame({
-        'year': test_features['year'],
-        'weekofyear': test_features['weekofyear'],  # Use original weekofyear for submission
         'city': test_features['city'],
+        'week_start_date': test_features['week_start_date'],
         'total_cases': predictions.round().astype(int)
     })
     
-    # Ensure correct column order
-    submission = submission[['city', 'year', 'weekofyear', 'total_cases']]
-    
-    # Save submission file
-    submission_path = Path("data/processed/submission_random_forest.csv")
+    # Save submission
+    submission_path = Path("data/processed/submission.csv")
     submission.to_csv(submission_path, index=False)
-    print(f"Submission file saved to {submission_path}")
-    
-    return submission
+    print(f"Submission saved to {submission_path}")
 
 def main():
-    """Main function to run the training process."""
-    print_section("Starting Random Forest Training")
+    """Main function to run the model training process."""
+    print_section("Starting Model Training")
     
     # Load data
     train_data, test_features = load_featured_data()
     
     # Prepare features
-    X, y = prepare_features(train_data)
+    X = prepare_features(train_data)
+    y = train_data['total_cases']
     
     # Split data
     X_train, X_test, y_train, y_test = train_test_split(
@@ -301,16 +264,16 @@ def main():
     # Evaluate model
     metrics = evaluate_model(model, X_test, y_test)
     
-    # Save model
+    # Save model and metrics
     save_model(model, metrics)
     
-    # Make predictions and create submission
-    submission = make_predictions(model, test_features, train_data)
+    # Make predictions
+    make_predictions(model, test_features)
     
     print_section("Next Steps")
-    print("1. Review model performance")
-    print("2. Check submission file in data/processed/submission.csv")
-    print("3. If not satisfied, adjust hyperparameters or feature engineering")
+    print("1. Review the model metrics")
+    print("2. Check the submission file")
+    print("3. If needed, adjust the model parameters")
 
 if __name__ == "__main__":
     main() 
