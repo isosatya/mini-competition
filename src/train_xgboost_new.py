@@ -238,12 +238,13 @@ def make_predictions(model, test_features):
     # Create submission DataFrame
     submission = pd.DataFrame({
         'city': test_features['city'],
+        'year': test_features['year'],
         'week_start_date': test_features['week_start_date'],
         'total_cases': predictions.round().astype(int)
     })
     
     # Save submission
-    submission_path = Path("data/processed/submission.csv")
+    submission_path = Path("data/processed/submission_xgboost.csv")
     submission.to_csv(submission_path, index=False)
     print(f"Submission saved to {submission_path}")
 

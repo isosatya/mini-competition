@@ -87,7 +87,7 @@ def prepare_features(df, is_training=True):
     print_section("Preparing Features")
     
     # Drop non-feature columns
-    non_feature_cols = ['city', 'week_start_date']
+    non_feature_cols = ['city', 'year', 'weekofyear']
     if is_training:
         non_feature_cols.append('total_cases')
     
@@ -233,12 +233,13 @@ def make_predictions(model, test_features):
     # Create submission DataFrame
     submission = pd.DataFrame({
         'city': test_features['city'],
+        'year': test_features['year'],
         'week_start_date': test_features['week_start_date'],
         'total_cases': predictions.round().astype(int)
     })
     
     # Save submission
-    submission_path = Path("data/processed/submission.csv")
+    submission_path = Path("data/processed/submission_random_forest.csv")
     submission.to_csv(submission_path, index=False)
     print(f"Submission saved to {submission_path}")
 
