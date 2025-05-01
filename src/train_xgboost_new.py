@@ -242,10 +242,10 @@ def make_predictions(model, test_features):
     })
     
     # Ensure correct column order
-    submission = submission[['year', 'weekofyear', 'city', 'total_cases']]
+    submission = submission[['city', 'year', 'weekofyear', 'total_cases']]
     
     # Save submission file
-    submission_path = Path("data/processed/submission.csv")
+    submission_path = Path("data/processed/submission_xgboost.csv")
     submission.to_csv(submission_path, index=False)
     print(f"Submission file saved to {submission_path}")
     
