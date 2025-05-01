@@ -242,7 +242,7 @@ def make_predictions(model, test_features):
     submission = pd.DataFrame({
         'city': test_features['city'],
         'year': test_features['year'],
-        'week_start_date': test_features['week_start_date'],
+        'weekofyear': test_features['weekofyear'],
         'total_cases': predictions.round().astype(int)
     })
     
