@@ -5,6 +5,7 @@ The `data_features.py` module enhances the cleaned data by adding new features t
 
 ## Key Features
 - Adds temporal features (day of year, quarter, month start/end)
+- Creates cyclic week features (sine and cosine transformations)
 - Creates weather statistics (mean, std, range)
 - Calculates NDVI features
 - Generates lag features for target variable
@@ -38,6 +39,7 @@ python src/data_features.py
    - Day of year
    - Quarter
    - Month start/end indicators
+   - Cyclic week features (sine and cosine)
 
 2. Weather Features:
    - Temperature statistics
@@ -63,4 +65,5 @@ python src/data_features.py
 - Review feature distributions
 - Consider feature importance
 - Check for feature correlations
-- Ensure test data has all required features 
+- Ensure test data has all required features
+- Cyclic features help capture seasonal patterns 
