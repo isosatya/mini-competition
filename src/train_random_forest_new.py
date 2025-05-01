@@ -86,8 +86,16 @@ def prepare_features(df, is_training=True):
     """
     print_section("Preparing Features")
     
+    # Convert date to datetime
+    df['week_start_date'] = pd.to_datetime(df['week_start_date'])
+    
+    # Create temporal features
+    df['year'] = df['week_start_date'].dt.year
+    df['month'] = df['week_start_date'].dt.month
+    df['weekofyear'] = df['week_start_date'].dt.isocalendar().week
+    
     # Drop non-feature columns
-    non_feature_cols = ['city', 'year', 'weekofyear']
+    non_feature_cols = ['city', 'week_start_date']
     if is_training:
         non_feature_cols.append('total_cases')
     
