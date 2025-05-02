@@ -134,8 +134,11 @@ data/processed/*
 
 # models
 models/
+results/
 
 # Temp files
 .DS_Store
 .idea/
 temp_backup/
+
+**/.claude/settings.local.json
