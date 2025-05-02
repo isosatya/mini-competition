@@ -8,13 +8,17 @@ dependencies:
   - numpy>=1.21.0
   - pandas>=1.3.0
   - scikit-learn>=1.0.0
+  - scipy>=1.7.0
   
   # Machine Learning
   - xgboost>=1.5.0
+  - lightgbm>=3.3.0
+  - statsmodels>=0.13.0
   
   # Visualization
   - matplotlib>=3.4.0
   - seaborn>=0.11.0
+  - plotly>=5.3.0
   
   # Jupyter (optional)
   - jupyter>=1.0.0
@@ -23,8 +27,18 @@ dependencies:
   # Utilities
   - python-dateutil>=2.8.0
   - tqdm>=4.62.0
+  - joblib>=1.0.0
+  - psutil>=5.8.0
   
   # Development tools
   - pytest>=6.2.0
   - black>=21.5b2
-  - flake8>=3.9.0 
+  - flake8>=3.9.0
+  
+  # Time series specific
+  - pip>=21.1.0
+  - pip:
+    - prophet>=1.0.0
+    - pmdarima>=1.8.0
+    - shap>=0.40.0
+    - darts>=0.17.0  # Optional: time series library
