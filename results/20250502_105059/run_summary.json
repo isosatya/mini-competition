@@ -1,0 +1,34 @@
+{
+  "run_id": "20250502_105059",
+  "start_time": "2025-05-02 10:50:59",
+  "end_time": "2025-05-02 11:59:17",
+  "duration_seconds": 4097.579388,
+  "mode": "enhanced",
+  "stages_executed": {
+    "preprocess": {
+      "executed": true,
+      "success": true
+    },
+    "feature_engineering": {
+      "executed": true,
+      "success": true
+    },
+    "model_training": {
+      "executed": true,
+      "success": true
+    },
+    "model_evaluation": {
+      "executed": true,
+      "success": false
+    }
+  },
+  "system_info": {
+    "system": "Darwin",
+    "release": "24.4.0",
+    "version": "Darwin Kernel Version 24.4.0: Fri Apr 11 18:32:50 PDT 2025; root:xnu-11417.101.15~117/RELEASE_ARM64_T6041",
+    "machine": "arm64",
+    "processor": "arm",
+    "python_version": "3.11.12",
+    "memory_total_gb": 36.0
+  }
+}

@@ -1,128 +1,112 @@
-# Data Processing Pipeline
+# DengAI: Dengue Fever Prediction Analysis
 
-This document describes the data processing pipeline for the Dengue Fever prediction model.
+## 1. Task Description
+The task is to predict weekly Dengue fever cases in two cities:
+- San Juan, Puerto Rico
+- Iquitos, Peru
 
-## Overview
+The predictions should be based on climate variables, as Dengue fever is a mosquito-borne disease whose spread is heavily dependent on climatic conditions. The current model ranks 3300th in the competition, which should be significantly improved.
 
-The data processing pipeline consists of several steps that are executed sequentially:
+## 2. Significance of Available Data
+The data includes various climate measurements on a weekly basis:
 
-1. Data Investigation (`data_investigation.py`)
-2. Data Cleaning (`data_cleaner.py`)
-3. Feature Combination (`data_cleaner_combinations.py`)
-4. Feature Engineering (`data_features.py`)
-5. Cleaned Data Analysis (`data_cleaner_investigation.py`)
+### Cities and Dates
+- `city`: City abbreviations (sj for San Juan, iq for Iquitos)
+- `week_start_date`: Date in yyyy-mm-dd format
 
-## Step 1: Data Investigation
+### Weather Station Measurements (NOAA's GHCN)
+- Temperature (max, min, average)
+- Precipitation
+- Diurnal temperature range
 
-**File:** `src/data_investigation.py`
+### Satellite Measurements (PERSIANN)
+- Precipitation amount
 
-This step analyzes the raw data and identifies:
-- Data structure and types
-- Missing values
-- Outliers
-- Feature correlations
-- Feature distributions
+### Reanalysis Measurements (NOAA's NCEP)
+- Precipitation
+- Dew point temperature
+- Air temperature
+- Relative humidity
+- Specific humidity
+- Temperature data (max, min, average)
+- Diurnal temperature range
 
-**Outputs:**
-- Missing value statistics
-- Correlation matrices
-- Distribution plots
-- Data cleaning recommendations
+### Vegetation Index (NDVI)
+- NDVI measurements for four pixel positions around the city center
 
-## Step 2: Data Cleaning
+### Target Variable
+- `total_cases`: Number of Dengue fever cases per week
 
-**File:** `src/data_cleaner.py`
+The distribution of the target variable shows significant differences between cities:
+- San Juan: Mean ~34 cases, Variance ~2640
+- Iquitos: Mean ~7.6 cases, Variance ~116
 
-Based on the investigation results, the following cleaning steps are performed:
-- Missing value handling
-- Outlier removal
-- Data type conversion
-- Feature normalization
-- Creation of `weekofyear` from date
+The high variance relative to the mean justifies the use of negative binomial regression.
 
-**Outputs:**
-- `cleaned_train_data.csv`
-- `cleaned_test_features.csv`
+## 3. Ideas for Additional Relevant Information
+Based on the biological and epidemiological characteristics of Dengue fever and mosquitoes, the following factors appear important:
 
-## Step 3: Feature Combination
+1. **Mosquito Life Cycle**: The code already considers lag features, but the mosquito life cycle (egg → larva → pupa → adult mosquito) takes about 8-10 days and is highly temperature-dependent.
 
-**File:** `src/data_cleaner_combinations.py`
+2. **Virus Incubation Period**: The incubation period of Dengue is 4-10 days after the mosquito bite. The current lag features may be insufficient to capture this biological delay.
 
-Combines related features to reduce redundancy:
-- Temperature features:
-  - Reanalysis temperatures (K)
-  - Station temperatures (C)
-- Date format conversion
-- Calculation of means and ranges
+3. **Standing Water**: After rainfall, standing water remains, which serves as breeding grounds for mosquitoes. A cumulative rain effect should be considered.
 
-**Outputs:**
-- `combined_train_data.csv`
-- `combined_test_features.csv`
+4. **Contagion Dynamics**: Dengue has contagion dynamics - infected humans can serve as a virus reservoir for further transmission. Autoregressive components could capture this dynamic.
 
-## Step 4: Feature Engineering
+5. **Seasonal Patterns**: Dengue shows pronounced seasonal patterns. Cyclic features could be helpful here.
 
-**File:** `src/data_features.py`
+6. **Population Density**: Missing in the data, but could be important as densely populated areas have a higher risk of transmission.
 
-Creates new features for the model:
-- Temporal features:
-  - `dayofyear`
-  - `quarter`
-  - `is_month_start`
-  - `is_month_end`
-- Weather features:
-  - Average temperature
-  - Temperature range
-  - Precipitation days
-  - Humidity
-- NDVI features:
-  - Mean
-  - Standard deviation
-  - Range
-- Lag features for `total_cases`
+7. **Population Immunity**: Previous outbreaks can influence population immunity.
 
-**Outputs:**
-- `featured_train_data.csv`
-- `featured_test_features.csv`
+8. **Control Efforts**: Information about mosquito control measures is missing.
 
-## Step 5: Cleaned Data Analysis
+## 4. Analysis of Data Cleaning
+The data cleaning process in the code appears fundamentally solid:
+- Missing values are handled with forward-fill (`fillna(method='ffill')`), which is appropriate for time series data.
+- The data is separated by city, which makes sense as the dynamics in both cities can be different.
 
-**File:** `src/data_cleaner_investigation.py`
+### Possible Improvements:
+- Instead of simple forward-fill, seasonal imputation or even ARIMA-based imputations could yield better results.
+- Outlier treatment is missing in the current code but could be important.
+- Checking for stationarity of the time series is missing.
 
-Verifies the quality of the cleaned data:
-- Feature distributions
-- Correlations
-- Missing values
-- Outliers
-- Data quality
+## 5. Analysis of Feature Engineering
+The current feature development has the following strengths and weaknesses:
 
-**Outputs:**
-- Distribution plots in `data/processed/png/`
-- Statistics and metrics
+### Strengths:
+- The code creates lag features for the most important climate variables.
+- Adding cyclic features for the week of the year is sensible.
+- Rolling averages are used to capture trends.
 
-## Execution Order
+### Weaknesses and Areas for Improvement:
+- **Lag Structure**: The lags used (1, 2, 3, 4 weeks) may not capture the full biological cycle. Longer lags (up to 8-12 weeks) could be useful.
+- **Cumulative Effects**: For precipitation, cumulative features that represent water locations over several weeks are missing.
+- **Interaction Terms**: Interactions between temperature and humidity are missing but biologically relevant.
+- **Contagion Dynamics**: Autoregressive components of the target variable are currently only simply implemented.
+- **Data Leakage**: When splitting train-test data, careful attention must be paid to time series data leakage.
+- **Feature Selection**: A more systematic feature selection could be helpful.
 
-1. Run `data_investigation.py` first
-2. Based on the results, run `data_cleaner.py`
-3. Run `data_cleaner_combinations.py`
-4. Run `data_features.py`
-5. Finally, run `data_cleaner_investigation.py`
+## 6. Analysis of Model Application
+The current code uses various models (Random Forest, XGBoost, LightGBM), which is a good approach.
 
-## Directory Structure
+### Potential for Improvement:
+1. **Model Structure**: The current Negative Binomial Regression may not fully capture the complex non-linearity between climate and Dengue cases.
+2. **Separate Models**: Separate models are trained for San Juan and Iquitos, which makes sense as they have different climatic conditions and epidemiological dynamics.
+3. **Time Series Validation**: A TimeSeriesSplit validation is used, which is appropriate for time series data.
+4. **Hyperparameter Tuning**: The Grid Search implementation is solid but could be improved through Bayesian Optimization or other advanced methods.
+5. **Ensemble Methods**: A combination of different models (stacking) could yield better results than individual models.
+6. **Evaluation**: The metrics used (RMSE, MAE, R²) are appropriate, but a detailed analysis of overestimation/underestimation during outbreaks is missing.
 
-```
-data/
-├── raw/                    # Raw data
-├── processed/              # Processed data
-│   ├── cleaned_*.csv      # Cleaned data
-│   ├── combined_*.csv     # Combined features
-│   ├── featured_*.csv     # Feature engineering
-│   └── png/               # Analysis plots
-└── submission/            # Predictions
-```
+## Summary and Main Improvement Suggestions
+1. **Biologically Relevant Features**: Development of features that better represent the mosquito life cycle and the virus incubation period.
+2. **Better Lag Structure**: Experiment with longer lags and cumulative effects, especially for precipitation.
+3. **Contagion Dynamics**: Integration of higher-order autoregressive components for the number of cases.
+4. **Advanced Models**: Test time series-specific models such as Prophet, ARIMA-X, or recurrent neural networks.
+5. **Better Ensemble**: Stacking different models could improve prediction accuracy.
+6. **Specific Outbreak Prediction**: Development of a special approach for predicting outbreaks, not just average case numbers.
+7. **Explainable AI**: Use of SHAP values or other tools to understand and improve model decisions.
+8. **Domain-Specific Knowledge**: Stronger incorporation of epidemiological knowledge about Dengue fever into modeling.
 
-## Next Steps
-
-After completing the data processing:
-1. Train the model with the processed data
-2. Evaluate model performance
-3. Optimize features based on model performance 
+These changes could contribute to significantly improving the ranking in the competition.

@@ -1,0 +1,36 @@
+{
+    "model": "lightgbm",
+    "rmse": 24.89174042024185,
+    "mae": 16.665617623918173,
+    "r2": -23.00266188067546,
+    "outbreak_f1": 0.18789808917197454,
+    "weighted_rmse": 26.506237853782462,
+    "outbreak_rmse": 18.356602524160945,
+    "outbreak_mae": 11.840255591054314,
+    "mean_absolute_percentage_error": 550.7305791071894,
+    "dengue_competition_metric": 5.507305791071895,
+    "city_metrics": {
+        "iq": {
+            "rmse": 10.085873887324087,
+            "mae": 7.603550295857988,
+            "r2": -2.7872996640414165,
+            "outbreak_f1": 0.2097902097902098,
+            "weighted_rmse": 11.081596236460205,
+            "outbreak_rmse": 10.469001862641921,
+            "outbreak_mae": 8.815384615384616,
+            "mean_absolute_percentage_error": 210.8549276991168,
+            "dengue_competition_metric": 2.1085492769911682
+        },
+        "sj": {
+            "rmse": 34.755907544526835,
+            "mae": 26.961344537815126,
+            "r2": -54.64300742292454,
+            "outbreak_f1": 0.21621621621621623,
+            "weighted_rmse": 37.55891730212098,
+            "outbreak_rmse": 29.350833524304356,
+            "outbreak_mae": 20.614285714285714,
+            "mean_absolute_percentage_error": 936.875016673336,
+            "dengue_competition_metric": 9.36875016673336
+        }
+    }
+}
