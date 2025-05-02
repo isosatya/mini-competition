@@ -22,7 +22,7 @@ def load_data():
 df = load_data()
 
 # Create tabs
-tab1, tab2, tab3 = st.tabs(["Introduction", "Training Data", "Correlation Analysis"])
+tab1, tab2, tab3, tab4 = st.tabs(["Introduction", "Training Data", "Correlation Analysis", "Model Results"])
 
 with tab1:
     st.title("Dengue Prediction Dashboard")
@@ -628,4 +628,175 @@ with tab3:
     - Relationships between different environmental factors
     - Seasonal patterns in the correlations
     - Differences between the two cities
-    """) 
+    """)
+
+with tab4:
+    st.title("Model Results")
+    
+    # Center the title and medal icon
+    st.markdown("""
+    <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+        <h2>Highest Score Submission</h2>
+        <span style="font-size: 24px;">🏆</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Add padding between title and image
+    st.markdown("<br>", unsafe_allow_html=True)  # Add a blank line
+    
+    # Center the image using a different approach
+    col1, col2, col3 = st.columns([1.2, 2, 0.8])  # Adjusted proportions to move image left
+    with col2:
+        st.image(
+            "data/processed/submission.png",
+            width=600,
+            use_column_width=False
+        )
+    
+    # --- Model Results Tab ---
+    # Define data loading functions first
+    @st.cache_data
+    def load_plot_predictions():
+        plot_df = pd.read_csv('data/processed/submission_random_forest_plot.csv')
+        return plot_df
+
+    @st.cache_data
+    def load_xgb_plot_predictions():
+        plot_df = pd.read_csv('data/processed/submission_xgboost_plot.csv')
+        return plot_df
+
+    plot_df = load_plot_predictions()
+    xgb_plot_df = load_xgb_plot_predictions()
+
+    def prepare_plot_df(city_code):
+        city_df = plot_df[plot_df['city'] == city_code].copy()
+        city_df['year'] = city_df['year'].astype(int)
+        city_df['weekofyear'] = city_df['weekofyear'].astype(int)
+        city_df['year_week'] = city_df['year'].astype(str) + '-' + city_df['weekofyear'].astype(str).str.zfill(2)
+        city_df = city_df.sort_values(['year', 'weekofyear'])
+        return city_df.reset_index(drop=True)
+
+    def prepare_xgb_plot_df(city_code):
+        city_df = xgb_plot_df[xgb_plot_df['city'] == city_code].copy()
+        city_df['year'] = city_df['year'].astype(int)
+        city_df['weekofyear'] = city_df['weekofyear'].astype(int)
+        city_df['year_week'] = city_df['year'].astype(str) + '-' + city_df['weekofyear'].astype(str).str.zfill(2)
+        city_df = city_df.sort_values(['year', 'weekofyear'])
+        return city_df.reset_index(drop=True)
+
+    # --- Random Forest Model Results ---
+    rf_col1, rf_col2, rf_col3 = st.columns([1.2, 1, 1])
+    with rf_col1:
+        st.markdown("""
+        <h3>Random Forest Model Results</h3>
+        <b>Model:</b> RandomForestRegressor<br>
+        <b>Best Parameters:</b><br>
+        &nbsp;&nbsp;max_depth: 30<br>
+        &nbsp;&nbsp;min_samples_leaf: 1<br>
+        &nbsp;&nbsp;min_samples_split: 2<br>
+        &nbsp;&nbsp;n_estimators: 100<br>
+        <b>Performance Metrics:</b><br>
+        &nbsp;&nbsp;RMSE: 32.54<br>
+        &nbsp;&nbsp;R² Score: 0.67<br>
+        """, unsafe_allow_html=True)
+    with rf_col2:
+        sj_plot_df = prepare_plot_df('sj').reset_index(drop=True)
+        sj_fig = px.line(
+            sj_plot_df,
+            x='year_week',
+            y='total_cases',
+            title='San Juan: Predicted Dengue Cases',
+            labels={
+                'year_week': 'Year-Week',
+                'total_cases': 'Predicted Cases'
+            }
+        )
+        sj_fig.update_traces(mode='lines+markers', line=dict(width=3))
+        sj_fig.update_yaxes(range=[0, 40])
+        sj_fig.update_layout(
+            height=400,
+            showlegend=False,
+            xaxis_tickangle=-45,
+            xaxis=dict(tickmode='auto', nticks=20)
+        )
+        st.plotly_chart(sj_fig, use_container_width=True)
+    with rf_col3:
+        iq_plot_df = prepare_plot_df('iq').reset_index(drop=True)
+        iq_fig = px.line(
+            iq_plot_df,
+            x='year_week',
+            y='total_cases',
+            title='Iquitos: Predicted Dengue Cases',
+            labels={
+                'year_week': 'Year-Week',
+                'total_cases': 'Predicted Cases'
+            }
+        )
+        iq_fig.update_traces(mode='lines+markers', line=dict(width=3))
+        iq_fig.update_yaxes(range=[0, 30])
+        iq_fig.update_layout(
+            height=400,
+            showlegend=False,
+            xaxis_tickangle=-45,
+            xaxis=dict(tickmode='auto', nticks=20)
+        )
+        st.plotly_chart(iq_fig, use_container_width=True)
+
+    # --- XGBoost Model Results ---
+    xgb_col1, xgb_col2, xgb_col3 = st.columns([1.2, 1, 1])
+    with xgb_col1:
+        st.markdown("""
+        <h3>XGBoost Model Results</h3>
+        <b>Model:</b> GridSearchCV<br>
+        <b>Best Parameters:</b><br>
+        &nbsp;&nbsp;colsample_bytree: 0.8<br>
+        &nbsp;&nbsp;learning_rate: 0.1<br>
+        &nbsp;&nbsp;max_depth: 6<br>
+        &nbsp;&nbsp;n_estimators: 300<br>
+        &nbsp;&nbsp;subsample: 0.8<br>
+        <b>Performance Metrics:</b><br>
+        &nbsp;&nbsp;RMSE: 30.47<br>
+        &nbsp;&nbsp;R² Score: 0.71<br>
+        """, unsafe_allow_html=True)
+    with xgb_col2:
+        sj_xgb_df = prepare_xgb_plot_df('sj')
+        sj_xgb_fig = px.line(
+            sj_xgb_df,
+            x='year_week',
+            y='total_cases',
+            title='San Juan: XGBoost Predicted Dengue Cases',
+            labels={
+                'year_week': 'Year-Week',
+                'total_cases': 'Predicted Cases'
+            }
+        )
+        sj_xgb_fig.update_traces(mode='lines+markers', line=dict(width=3))
+        sj_xgb_fig.update_yaxes(range=[0, 40])
+        sj_xgb_fig.update_layout(
+            height=400,
+            showlegend=False,
+            xaxis_tickangle=-45,
+            xaxis=dict(tickmode='auto', nticks=20)
+        )
+        st.plotly_chart(sj_xgb_fig, use_container_width=True)
+    with xgb_col3:
+        iq_xgb_df = prepare_xgb_plot_df('iq')
+        iq_xgb_fig = px.line(
+            iq_xgb_df,
+            x='year_week',
+            y='total_cases',
+            title='Iquitos: XGBoost Predicted Dengue Cases',
+            labels={
+                'year_week': 'Year-Week',
+                'total_cases': 'Predicted Cases'
+            }
+        )
+        iq_xgb_fig.update_traces(mode='lines+markers', line=dict(width=3))
+        iq_xgb_fig.update_yaxes(range=[0, 30])
+        iq_xgb_fig.update_layout(
+            height=400,
+            showlegend=False,
+            xaxis_tickangle=-45,
+            xaxis=dict(tickmode='auto', nticks=20)
+        )
+        st.plotly_chart(iq_xgb_fig, use_container_width=True) 
