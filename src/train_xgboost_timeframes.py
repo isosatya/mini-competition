@@ -1125,8 +1125,17 @@ def generate_submission(city_predictions):
         logger.error("Submission missing required columns: city, year, weekofyear")
         return None
     
-    # Sort submission by city, year, and week
-    submission = submission.sort_values(['city', 'year', 'weekofyear'])
+    # Create a custom order for cities to ensure San Juan (sj) comes first, followed by Iquitos (iq)
+    city_order = {'sj': 0, 'iq': 1}  # Define sorting order: sj first, then iq
+    
+    # Create temporary column for sorting by our custom city order
+    submission['city_order'] = submission['city'].map(city_order)
+    
+    # Sort submission by custom city order, year, and week
+    submission = submission.sort_values(['city_order', 'year', 'weekofyear'])
+    
+    # Remove the temporary sorting column
+    submission = submission.drop(columns=['city_order'])
     
     # Create submission path with timestamp
     submission_path = submissions_dir / f"submission_xgboost_timeframes_{timestamp}.csv"
